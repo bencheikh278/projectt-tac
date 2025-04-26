@@ -1,0 +1,43 @@
+
+==>The Ping Echo tactic is detected at line 2
+pingSender--Ping-->pingReceiver
+pingSender--notifyException-->faultMonitor
+faultMonitor--handleException-->faultMonitor
+pingReceiver--Echo-->pingSender
+
+==>The Ping Echo tactic is detected at line 6
+pingSender--Ping-->pingReceiver
+pingReceiver--Echo-->pingSender
+
+==>The Ping Echo tactic is detected at line 11
+pingSender--Ping-->pingReceiver
+pingSender--notifyException-->faultMonitor
+faultMonitor--handleException-->faultMonitor
+pingReceiver--Echo-->pingSender
+
+==>The Ping Echo tactic is detected at line 15
+pingSender--Ping-->pingReceiver
+pingSender--notifyException-->faultMonitor
+faultMonitor--handleException-->faultMonitor
+pingReceiver--Echo-->pingSender
+
+==>The Ping Echo tactic is detected at line 31
+pingSender--Ping-->pingReceiver
+pingReceiver--Echo-->pingSender
+
+==>The Ping Echo tactic is detected at line 38
+pingSender--Ping-->pingReceiver
+pingReceiver--Echo-->pingSender
+
+==>The Ping Echo tactic is detected at line 43
+pingSender--Ping-->pingReceiver
+pingReceiver--Echo-->pingSender
+
+===================RESULT===================
+Tactic participating objects: 
+PingSender -- > pingSender
+exception Handler -- > faultMonitor
+PingReceiver -- > pingReceiver
+Number of checks in the trace: 7
+
+============================================
