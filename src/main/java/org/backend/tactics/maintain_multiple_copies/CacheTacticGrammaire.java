@@ -151,7 +151,7 @@ tacticParticipatingObjects.put("Repository", callee.image);
      }
     } else {
 numberOfCacheInteractions++;
-        result.append("==>The Maintain Multiple Copies (Cache) tactic is detected at line "+i);
+        result.append("\n==>The Maintain Multiple Copies (Cache) tactic is detected at line "+i);
         result.append("\n");
         result.append(map.get("caller") + "--Request-->" + map.get("callee1"));
         result.append("\n");
@@ -173,7 +173,7 @@ numberOfCacheInteractions++;
 if(!(callee.image.equals(map.get("callee2"))))  {{if (true) throw new ParseException(" Not expected callee");}}
        else {
          numberOfCacheInteractions++;
-         result.append("==>The Maintain Multiple Copies (Cache) tactic is detected at line "+i);
+         result.append("\n==>The Maintain Multiple Copies (Cache) tactic is detected at line "+i);
          result.append("\n");
          result.append(map.get("caller") + "--Request-->" + map.get("callee1"));
          result.append("\n");

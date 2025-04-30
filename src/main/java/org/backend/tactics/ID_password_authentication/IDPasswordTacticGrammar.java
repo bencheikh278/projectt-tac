@@ -71,11 +71,11 @@ public class IDPasswordTacticGrammar implements IDPasswordTacticGrammarConstants
                             String value = TacticEntities.get(key);
                             result.append(key + " --> " + value);
                         }
-                    result.append("\nNumber of ID/password tactic detections in the trace: " + CheckCount);
+                    result.append("\nNumber of IDPassword tactic detections in the trace: " + CheckCount);
                     result.append("\n============================================\n");
                 } else {
                     result.append("\n");
-                    result.append("No maintain data confidentiality   Tactic detected.");
+                    result.append("No IDPassword authentication Tactic detected.");
                     result.append("\n");
                 }
 
@@ -126,7 +126,7 @@ if (!callee.image.equals(CallerCalleeMap.get("callee"))) {
                     TacticEntities.put("Client", CallerCalleeMap.get("caller"));
                     TacticEntities.put("Authenticator", caller.image);
                     CheckCount++;
-    result.append("==>The ID/password tactic is detected at line " + i);
+    result.append("\n==>The ID/password tactic is detected at line " + i);
     result.append("\n");
     result.append(CallerCalleeMap.get("caller")+"--requestAuthentication-->"+CallerCalleeMap.get("callee"));
     result.append("\n");

@@ -120,7 +120,7 @@ map.clear();
         S();
         try {
           D();
-          result.append("==>The Maintain Data confidentiality tactic is detected at line " + tacticStartLine);
+          result.append("\n==>The Maintain Data confidentiality tactic is detected at line " + tacticStartLine);
           result.append("\n");
           result.append(map.get("caller") + "--encrypt-->" + map.get("callee"));
           result.append("\n");

@@ -6,6 +6,7 @@ import com.itextpdf.text.Paragraph;
 import com.itextpdf.text.pdf.draw.LineSeparator;
 import org.apache.tika.Tika;
 import org.backend.tactics.maintain_multiple_copies.CacheTacticGrammaire;
+import org.backend.tactics.onetime_password.OneTimePasswordTacticGrammar;
 import org.backend.tactics.ping_echo.PingEchoTacticGrammaire;
 import org.backend.tactics.ID_password_authentication.IDPasswordTacticGrammar;
 import org.backend.tactics.maintain_data_confidentiality.MaintainDataConfidentialityParser;
@@ -26,15 +27,14 @@ import java.util.Date;
 public class FileService {
 
     private final String UPLOAD_DIR = "uploads";
-    private  final Pattern FORMAT_PATTERN =
-            Pattern.compile("^CALLER:.*?,METHOD:.*?,CALLEE:.*?;$");
+    private final Pattern FORMAT_PATTERN = Pattern.compile("^CALLER:.*?,METHOD:.*?,CALLEE:.*?;$");
 
-    public List<String> processAndValidate(MultipartFile file, String tacticName) throws Exception {
+    public List<Integer> processAndValidate(MultipartFile file, String tacticName) throws Exception {
         String fileName = file.getOriginalFilename();
         String extension = getExtension(fileName);
+
         // Check extension validity
         if (!isValidExtension(extension)) {
-            // If invalid extension, delete the file if it was saved
             throw new IllegalArgumentException("Unsupported file type. Only .pdf, .docx, .txt are allowed.");
         }
 
@@ -42,23 +42,31 @@ public class FileService {
         String text = extractText(file, extension);
 
         // Validate format
-        List<String> errors = new ArrayList<>();
+        List<Integer> errorLineNumbers = new ArrayList<>();
         String[] lines = text.split("\\r?\\n");
 
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
+
+            boolean isInvalid = false;
+
             if (!line.isEmpty() && !FORMAT_PATTERN.matcher(line).matches()) {
-                errors.add("❌ Format error at line " + (i + 1) + ": \"" + line + "\"");
-            }
-            else {
+                isInvalid = true;
+            } else {
                 // Check if there's anything after the single semicolon
                 if (line.endsWith(";") && line.indexOf(';', line.indexOf(';') + 1) != -1) {
-                    errors.add("❌ Format error at line " + (i + 1) + ": \"" + line + "\"");
+                    isInvalid = true;
                 }
             }
+
+            if (isInvalid) {
+                errorLineNumbers.add(i + 1); // Store line number (1-based)
+            }
         }
-        return errors; // Return the list of errors (or empty if valid)
+
+        return errorLineNumbers; // Just the problematic line numbers
     }
+
 
     public String extractText(MultipartFile file, String extension) throws Exception {
         InputStream inputStream = file.getInputStream();
@@ -79,6 +87,7 @@ public class FileService {
     private String getExtension(String filename) {
         return filename.substring(filename.lastIndexOf('.') + 1);
     }
+
     public String runTacticParser(String tacticName, MultipartFile file) throws Exception {
         String originalText = extractText(file, getExtension(file.getOriginalFilename()));
 
@@ -102,12 +111,16 @@ public class FileService {
                 PingEchoTacticGrammaire parser = new PingEchoTacticGrammaire(inputStream);
                 yield parser.parseAndGetResult(inputStream);
             }
-           case "maintain_data_confidentiality" -> {
-               MaintainDataConfidentialityParser parser = new MaintainDataConfidentialityParser(inputStream);
-               yield parser.parseAndGetResult(inputStream);
-           }
+            case "maintain_data_confidentiality" -> {
+                MaintainDataConfidentialityParser parser = new MaintainDataConfidentialityParser(inputStream);
+                yield parser.parseAndGetResult(inputStream);
+            }
             case "id_password_authentication" -> {
                 IDPasswordTacticGrammar parser = new IDPasswordTacticGrammar(inputStream);
+                yield parser.parseAndGetResult(inputStream);
+            }
+            case "onetime_password" -> {
+                OneTimePasswordTacticGrammar parser = new OneTimePasswordTacticGrammar(inputStream);
                 yield parser.parseAndGetResult(inputStream);
             }
             default -> throw new IllegalArgumentException("Unknown tactic: " + tacticName);
@@ -115,6 +128,7 @@ public class FileService {
 
 
     }
+
     public String saveAsTxt(String content) throws IOException {
         try {
             File folder = new File("downloads");
@@ -128,8 +142,6 @@ public class FileService {
             throw new IOException("❌ Failed to save TXT file: " + e.getMessage(), e);
         }
     }
-
-
     public String saveAsPdf(String content) throws IOException {
         File folder = new File("downloads");
         if (!folder.exists()) folder.mkdirs();
@@ -138,37 +150,66 @@ public class FileService {
         File pdfFile = new File(folder, fileName);
 
         try (OutputStream out = new FileOutputStream(pdfFile)) {
-            Document doc = new Document();
+            Document doc = new Document(PageSize.A4);
             PdfWriter writer = PdfWriter.getInstance(doc, out);
 
-            // Add footer with timestamp and page numbers
-            writer.setPageEvent(new PdfPageEventHelper() {
+            // Watermark handler
+            class CenteredDiagonalLogoEvent extends PdfPageEventHelper {
+                private Image background;
+
+                public CenteredDiagonalLogoEvent() {
+                    try {
+                        InputStream logoStream = getClass().getClassLoader().getResourceAsStream("Screenshot 2025-04-29 112547.png");
+                        if (logoStream != null) {
+                            byte[] logoBytes = logoStream.readAllBytes();
+                            background = Image.getInstance(logoBytes);
+                            background.scaleAbsolute(800, 500); 
+                            background.setRotationDegrees(65);  
+                        }
+                    } catch (Exception e) {
+                        System.out.println("⚠️ Failed to load background: " + e.getMessage());
+                    }
+                }
+
                 @Override
                 public void onEndPage(PdfWriter writer, Document document) {
+                    if (background != null) {
+                        PdfContentByte canvas = writer.getDirectContentUnder();
+
+                        // Light opacity
+                        PdfGState gState = new PdfGState();
+                        gState.setFillOpacity(0.15f);
+                        canvas.setGState(gState);
+
+                        // Position in center of page
+                        float centerX = (document.left() + document.right()) / 2;
+                        float centerY = (document.top() + document.bottom()) / 2;
+                        float x = centerX - (background.getScaledWidth() / 2);
+                        float y = centerY - (background.getScaledHeight() / 2);
+
+                        background.setAbsolutePosition(x, y);
+
+                        try {
+                            canvas.addImage(background);
+                        } catch (DocumentException e) {
+                            System.out.println("⚠️ Failed to add logo: " + e.getMessage());
+                        }
+                    }
+
+                    // Footer
                     PdfContentByte cb = writer.getDirectContent();
-                    Phrase footer = new Phrase("Generated on: " + new Date(), new Font(Font.FontFamily.HELVETICA, 8));
+                    Font footerFont = new Font(Font.FontFamily.HELVETICA, 8);
+                    Phrase footer = new Phrase("Generated on: " + new Date(), footerFont);
                     ColumnText.showTextAligned(cb, Element.ALIGN_LEFT, footer, document.leftMargin(), document.bottomMargin() - 10, 0);
 
-                    Phrase pageNum = new Phrase("Page " + writer.getPageNumber(), new Font(Font.FontFamily.HELVETICA, 8));
+                    Phrase pageNum = new Phrase("Page " + writer.getPageNumber(), footerFont);
                     ColumnText.showTextAligned(cb, Element.ALIGN_RIGHT, pageNum, document.right() - document.rightMargin(), document.bottomMargin() - 10, 0);
                 }
-            });
+            }
+
+            writer.setPageEvent(new CenteredDiagonalLogoEvent());
 
             doc.open();
-
-            // Add logo
-            try {
-                InputStream logoStream = getClass().getClassLoader().getResourceAsStream("Capture d'écran 2025-04-23 010301.png"); // Path to logo inside resources
-                if (logoStream != null) {
-                    byte[] logoBytes = logoStream.readAllBytes(); // Java 9+; for Java 8 use IOUtils.toByteArray(logoStream)
-                    Image logo = Image.getInstance(logoBytes);
-                    logo.scaleToFit(60, 60); // Resize if needed
-                    logo.setAbsolutePosition(doc.right() - logo.getScaledWidth() - 1, doc.top() - logo.getScaledHeight() - 1);
-                    doc.add(logo);
-                }
-            } catch (Exception e) {
-                System.out.println("⚠️ Failed to load logo: " + e.getMessage());
-            }
 
             // Title
             Font titleFont = new Font(Font.FontFamily.HELVETICA, 18, Font.BOLD);
@@ -177,22 +218,16 @@ public class FileService {
             title.setSpacingAfter(20f);
             doc.add(title);
 
-            // Monospaced font for body
+            // Body
             Font monoFont = new Font(Font.FontFamily.COURIER, 12);
-
-            // Process content
-            String[] lines = content.split("\n");
-            for (String line : lines) {
+            for (String line : content.split("\n")) {
                 line = line.trim();
                 if (line.startsWith("==>")) {
-                    // Tactic detected header (bold)
                     Paragraph p = new Paragraph(line, new Font(Font.FontFamily.COURIER, 12, Font.BOLD));
                     p.setSpacingBefore(10f);
                     doc.add(p);
                 } else if (line.startsWith("===")) {
-                    // Section separator
-                    LineSeparator ls = new LineSeparator();
-                    doc.add(new Chunk(ls));
+                    doc.add(new Chunk(new LineSeparator()));
                 } else if (line.toLowerCase().contains("tactic participating objects")) {
                     Paragraph p = new Paragraph("\n" + line, new Font(Font.FontFamily.HELVETICA, 12, Font.BOLDITALIC));
                     p.setSpacingBefore(8f);
@@ -209,9 +244,5 @@ public class FileService {
             throw new IOException("❌ Failed to save PDF file: " + e.getMessage(), e);
         }
     }
-
-
-
-
 
 }

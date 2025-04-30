@@ -1,0 +1,22 @@
+
+==>The ID/password tactic is detected at line 2
+Client--requestAuthentication-->Authenticator
+Authenticator--CheckAuthentication-->Authenticator
+
+==>The ID/password tactic is detected at line 8
+Client--requestAuthentication-->Authenticator
+Authenticator--CheckAuthentication-->Authenticator
+
+==>The ID/password tactic is detected at line 10
+Client--requestAuthentication-->Authenticator
+Authenticator--CheckAuthentication-->Authenticator
+
+==>The ID/password tactic is detected at line 16
+Client--requestAuthentication-->Authenticator
+Authenticator--CheckAuthentication-->Authenticator
+
+===================RESULT===================
+Tactic Participating Objects:
+Client --> ClientAuthenticator --> Authenticator
+Number of IDPassword tactic detections in the trace: 4
+============================================

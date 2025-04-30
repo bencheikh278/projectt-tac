@@ -27,16 +27,23 @@ public class FileUploadController {
     public ResponseEntity<?> handleFileUpload(@PathVariable("tacticName") String tacticName,
                                               @RequestParam("file") MultipartFile file) {
         try {
-            var validationResult = fileService.processAndValidate(file, tacticName);
+            var errorLines = fileService.processAndValidate(file, tacticName);
 
-            if (!validationResult.isEmpty()) {
-                return ResponseEntity.badRequest().body(validationResult);
+            if (!errorLines.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", true,
+                        "message", "❌ Format errors found.",
+                        "invalidLines", errorLines  // <--- clearer to frontend
+                ));
             }
 
-            if ("maintain_multiple_copies".equalsIgnoreCase(tacticName) || "ping_echo".equalsIgnoreCase(tacticName) || "maintain_data_confidentiality".equalsIgnoreCase(tacticName) || "id_password_authentication".equalsIgnoreCase(tacticName) )  {
-                String result = fileService.runTacticParser(tacticName, file);
+            if ("maintain_multiple_copies".equalsIgnoreCase(tacticName)
+                    || "ping_echo".equalsIgnoreCase(tacticName)
+                    || "maintain_data_confidentiality".equalsIgnoreCase(tacticName)
+                    || "id_password_authentication".equalsIgnoreCase(tacticName)
+                    || "onetime_password".equalsIgnoreCase(tacticName)) {
 
-                // Save TXT and PDF versions
+                String result = fileService.runTacticParser(tacticName, file);
                 String txtFileName = fileService.saveAsTxt(result);
                 String pdfFileName = fileService.saveAsPdf(result);
 
@@ -51,9 +58,10 @@ public class FileUploadController {
             return ResponseEntity.ok("✅ File processed and validated successfully.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("❌ Error: " + e.getMessage());
+                    .body(Map.of("error", true, "message", "❌ Error: " + e.getMessage()));
         }
     }
+
 
     @GetMapping("/download/{filename}")
     public ResponseEntity<byte[]> downloadFile(@PathVariable String filename) throws IOException {

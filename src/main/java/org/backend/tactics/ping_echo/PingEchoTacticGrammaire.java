@@ -43,7 +43,7 @@ public class PingEchoTacticGrammaire implements PingEchoTacticGrammaireConstants
                                                   System.out.println(key + " -- > " + value);
                                                 }
 
-                                          System.out.println("Number of checksin the trace: "+numberofChecks);
+                                          System.out.println("Number of checks in the trace: "+numberofChecks);
                                           System.out.println("\n============================================\n");
 
                              }
@@ -85,7 +85,7 @@ public class PingEchoTacticGrammaire implements PingEchoTacticGrammaireConstants
                 result.append("\n============================================\n");
 
             } else {
-                result.append("\nNo Cache Tactic detected.\n");
+                result.append("\nNo Ping Echo Tactic detected.\n");
             }
         }catch (Exception e) {
             result.append("Parsing Error: ").append(e.getMessage()).append("\n");
